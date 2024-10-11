@@ -17,6 +17,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set environment variables
+        run: |
+          echo "REACT_PASS_THROUGH_GITHUB_ENV_ONE=https://example.com" >> $GITHUB_ENV
+          echo "REACT_PASS_THROUGH_GITHUB_ENV_TWO=123456789" >> $GITHUB_ENV
+
       - name: Create .env file
         run: |
           echo "REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}" > ${{ env.ENV_FILE }}

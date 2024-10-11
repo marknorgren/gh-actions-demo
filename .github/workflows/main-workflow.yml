@@ -1,0 +1,71 @@
+name: Main Workflow
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  ENV_FILE_PATH: ${{ github.workspace }}
+  ENV_FILE: ${{ github.workspace }}/.env
+
+jobs:
+  generate-and-use-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create .env file
+        run: |
+          echo "REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}" > ${{ env.ENV_FILE }}
+          echo "REACT_APP_API_KEY=${{ secrets.REACT_APP_API_KEY }}" >> ${{ env.ENV_FILE }}
+          chmod 644 ${{ env.ENV_FILE }}
+
+      - name: Debug - Show .env contents
+        run: |
+          echo "Contents of ${{ env.ENV_FILE }}:"
+          cat ${{ env.ENV_FILE }}
+
+      - name: Debug - List workspace contents
+        run: |
+          echo "Current working directory: $(pwd)"
+          echo "Contents of GITHUB_WORKSPACE:"
+          ls -la ${{ github.workspace }}
+
+      - name: Upload .env file as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-file
+          include-hidden-files: true
+          path: ${{ env.ENV_FILE }}
+          if-no-files-found: error
+
+      - name: Use .env file in this job
+        run: |
+          source ${{ env.ENV_FILE }}
+          echo "Using REACT_APP_API_URL: $REACT_APP_API_URL"
+          # Don't echo the API key in logs for security reasons
+
+  use-env-in-another-job:
+    needs: generate-and-use-env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download .env artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: env-file
+
+      - name: Use .env file
+        run: |
+          ls -la
+          source .env
+          echo "Using REACT_APP_API_URL: $REACT_APP_API_URL"
+          # Don't echo the API key in logs for security reasons
+
+  call-reusable:
+    needs: generate-and-use-env
+    uses: marknorgren/action-workflows/.github/workflows/reusable-workflow.yml@main
+    with:
+      env_file: env-file
